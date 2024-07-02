@@ -36,60 +36,117 @@ Internal Representation and Key Implementation Points.
 
 "
 Class {
-	#name : #RecordedInstrumentCommand,
-	#superclass : #RecordedCommand,
-	#type : #variable,
+	#name : 'RecordedInstrumentCommand',
+	#superclass : 'RecordedCommand',
+	#type : 'variable',
 	#instVars : [
 		'dirtNotes',
-		'rythm',
-		'symbol'
+		'rhythm',
+		'symbol',
+		'notes'
 	],
-	#category : #'CoypuRecorder-RecordedCommand'
+	#category : 'CoypuRecorder-RecordedCommand',
+	#package : 'CoypuRecorder',
+	#tag : 'RecordedCommand'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 RecordedInstrumentCommand >> dirtNotes [
 
 ^	dirtNotes
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 RecordedInstrumentCommand >> dirtNotes: aDirtNotes [
 
 dirtNotes := aDirtNotes
 ]
 
-{ #category : #printing }
+{ #category : 'testing' }
+RecordedInstrumentCommand >> isRecordedInstructionCommand [
+
+	^ false
+]
+
+{ #category : 'testing' }
+RecordedInstrumentCommand >> isRecordedInstrumentCommand [
+
+^true
+]
+
+{ #category : 'accessing' }
+RecordedInstrumentCommand >> notes [
+
+^notes 
+]
+
+{ #category : 'accessing' }
+RecordedInstrumentCommand >> notes: anArrayOfNotes [
+
+notes := anArrayOfNotes
+]
+
+{ #category : 'printing' }
 RecordedInstrumentCommand >> print [
-"Print the command into the same way it has been used in the original performance"
+	"Print the command in the same way it has been used in the original performance"
+
 	| m |
-	m := rythm , ' to: #' , symbol asString , '.'.
-	delay ifNotNil: [
-		m := m allButLast , ' atTime: ' , delay asString , '.' ].
+	"Print for a Once line ex: 'bass3' once "
+	rhythm ifNil: [
+		delay
+			ifNotNil: [
+				(symbol includesSubstring: 'onceAtSpeed:')
+					ifTrue: [
+					^ symbol allButFirst , ' atTime: ' , delay asString , '.' ]
+					ifFalse: [
+					^ symbol allButFirst , 'AtTime: ' , delay asString , '.' ] ]
+			ifNil: [ ^ symbol allButFirst , '.' ] ].
+
+
+	m := rhythm.
+	"add the notes if called"
+	notes ifNotNil: [ m := m , notes ].
+	"Classic command ex: 16 upbeats to: #bass3"
+	self symbol
+		ifNotNil: [
+			m := m , ' to: #' , symbol asString
+			     ,
+			     (delay
+				      ifNotNil: [ ' atTime: ' , delay asString , '.' ]
+				      ifNil: [ '.' ]) ]
+		ifNil: [ "Instrument without a symbol ex: 16 upbeats."
+			delay
+				ifNotNil: [
+					m := ('' join: m substrings allButLast) , ' delayed: '''
+					     , m substrings last asString , ''' atTime: '
+					     , delay asString , '.' ]
+				ifNil: [ m := m , '.' ] ].
+
+	"add the dirtNotes if called"
 	dirtNotes ifNotNil: [
 		m := m allButLast , '; ' , 'dirtNotes: ''' , dirtNotes , '''.' ].
 	^ m
 ]
 
-{ #category : #'instance creation' }
-RecordedInstrumentCommand >> rythm [
-^rythm 
+{ #category : 'instance creation' }
+RecordedInstrumentCommand >> rhythm [
+
+	^ rhythm
 ]
 
-{ #category : #'instance creation' }
-RecordedInstrumentCommand >> rythm: aRythm [ 
+{ #category : 'instance creation' }
+RecordedInstrumentCommand >> rhythm: aRythm [
 
-	rythm := aRythm.
-
+	rhythm := aRythm
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 RecordedInstrumentCommand >> symbol [
 
 	^ symbol 
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 RecordedInstrumentCommand >> symbol: aSymbol [
 
 

@@ -33,32 +33,46 @@ Internal Representation and Key Implementation Points.
 
 "
 Class {
-	#name : #RecordedInstructionCommand,
-	#superclass : #RecordedCommand,
-	#type : #variable,
+	#name : 'RecordedInstructionCommand',
+	#superclass : 'RecordedCommand',
+	#type : 'variable',
 	#instVars : [
-		'order'
+		'instruction'
 	],
-	#category : #'CoypuRecorder-RecordedCommand'
+	#category : 'CoypuRecorder-RecordedCommand',
+	#package : 'CoypuRecorder',
+	#tag : 'RecordedCommand'
 }
 
-{ #category : #accessing }
-RecordedInstructionCommand >> order [
+{ #category : 'accessing' }
+RecordedInstructionCommand >> instruction [
 
-	^order
+	^instruction
 ]
 
-{ #category : #accessing }
-RecordedInstructionCommand >> order: anOrder [
+{ #category : 'accessing' }
+RecordedInstructionCommand >> instruction: anInstruction [
 
-order := anOrder
+instruction := anInstruction 
 ]
 
-{ #category : #printing }
+{ #category : 'testing' }
+RecordedInstructionCommand >> isRecordedInstructionCommand [
+
+	^ true
+]
+
+{ #category : 'testing' }
+RecordedInstructionCommand >> isRecordedInstrumentCommand [
+
+	^ false
+]
+
+{ #category : 'printing' }
 RecordedInstructionCommand >> print [
 "Print the command into the same way it has been used in the original performance"
 	| p |
-	p := 'p ' , self order asString.
+	p := 'p ' , self instruction asString.
 	delay ifNotNil: [
 		p := (p includesSubstring: ':')
 			     ifFalse: [ p allButLast , 'AtTime: ' , delay asString , '.' ]

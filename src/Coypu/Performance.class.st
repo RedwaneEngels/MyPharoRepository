@@ -8,6 +8,8 @@ Class {
 	#superclass : 'Dictionary',
 	#type : 'variable',
 	#instVars : [
+		'displayVisualizer',
+		'visualizer',
 		'stepVisualizer',
 		'performer',
 		'canvas',
@@ -20,7 +22,7 @@ Class {
 		'activeDSP',
 		'perfVisualizer',
 		'trackVisualizers',
-		'haveVisualizer'
+		'isVisualizerOpen'
 	],
 	#classInstVars : [
 		'uniqueInstance',
@@ -179,6 +181,15 @@ Performance >> dirtMIDIDevice: aString [
 ]
 
 { #category : 'accessing' }
+Performance >> displayVisualizer: aBoolean [
+
+displayVisualizer := aBoolean.
+visualizer := MfVisualizerElement new level: 2.
+	stepVisualizer := MfPerformanceStepsDisplayer new.
+isVisualizerOpen := false
+]
+
+{ #category : 'accessing' }
 Performance >> freq [
 	"better to convert it to Float to avoid OSC sending issues"
 	^ freq asFloat
@@ -187,13 +198,11 @@ Performance >> freq [
 { #category : 'accessing' }
 Performance >> freq: aDurationInSeconds [
 	"use for playback speed"
-	freq := aDurationInSeconds asFloat
-]
 
-{ #category : 'as yet unclassified' }
-Performance >> haveVisualizer: aBoolean [
-
-	haveVisualizer := aBoolean
+	freq := aDurationInSeconds asFloat.
+	isVisualizerOpen ifTrue: [
+		visualizer squareArray do: [ :s |
+			s changeAnimationTime: freq * 4 ] ]
 ]
 
 { #category : 'LiveCoding - Performance' }
@@ -208,13 +217,20 @@ Performance >> initialize: aSize [
 	activeProcess := Process new terminate.
 	self muteAll.
 	freq := 132 bpm.
-	haveVisualizer := false
+
+	displayVisualizer := false.
 ]
 
 { #category : 'testing' }
 Performance >> isPerformance [
 
 	^ true
+]
+
+{ #category : 'accessing' }
+Performance >> isVisualizerOpen: aBoolean [ 
+
+isVisualizerOpen:= aBoolean 
 ]
 
 { #category : 'accessing' }
@@ -226,6 +242,12 @@ Performance >> length [
 		               ((self values at: i) at: 1) size ].
 	maxLength := valuesSizes inject: 0 into: [ :a :c | a max: c ].
 	^ maxLength
+]
+
+{ #category : 'as yet unclassified' }
+Performance >> levelOfDetail: anInteger [
+
+	visualizer level: anInteger 
 ]
 
 { #category : 'muting and soloing' }
@@ -250,26 +272,17 @@ Performance >> muteAll [
 
 ]
 
-{ #category : 'as yet unclassified' }
-Performance >> openSteps [
+{ #category : 'accessing' }
+Performance >> openVisualizers [
+
 	| space |
 	space := BlSpace new.
 	space root layout: BlFlowLayout horizontal.
+	space root addChild: stepVisualizer.
+	space root addChild: visualizer.
+	space root childrenDo: [ :child | child margin: (BlInsets horizontal: 10) ].
 	space toTheme: MfMooflodTheme new.
-	stepVisualizer transformDo: [ :c | c translateBy: 200 @ 150 ].
-	space root addChild: stepVisualizer .
 	space show
-]
-
-{ #category : 'as yet unclassified' }
-Performance >> openSteps: aMfStepVisualizer [
-|space |
-	space := BlSpace new.
-	space root layout: BlFlowLayout horizontal.
-	space toTheme: MfMooflodTheme new. 
-	aMfStepVisualizer transformDo: [ :c | c translateBy: 200 @ 150 ].
-	space root addChild: aMfStepVisualizer .
-	space show.
 ]
 
 { #category : 'LiveCoding - satelliteEvent' }
@@ -369,13 +382,11 @@ Performance >> performer [
 
 { #category : 'accessing' }
 Performance >> performer: aPerformer [
-	"choose a Performer for the Performance"
-
-	" to be safe, it clear the performance"
-
+"choose a Performer for the Performance"
+" to be safe, it clear the performance"
 	Performance uniqueInstance muteAll.
-	performer := aPerformer.
-	Performance uniqueInstance muteAll
+	performer := aPerformer. 
+	Performance uniqueInstance muteAll.
 ]
 
 { #category : 'playing' }
@@ -396,21 +407,24 @@ Performance >> play [
 
 { #category : 'playing' }
 Performance >> playFor: aNumberOfSteps [
-
-	"haveVisualizer ifNil: [ self haveVisualizer: false ].
-	haveVisualizer ifFalse: ["
-		stepVisualizer := MfPerformanceNbStepsElement new.
-		stepVisualizer addSteps: self transportStep.
-		stepVisualizer initializeAnimation: self freq.
-		self openSteps: stepVisualizer.
-		haveVisualizer := true ."]."
-
 	" reset all the Sequencers"
-	self resetAllSequencers.
-
 	"just on performance at once"
 	self activeProcess isTerminated ifTrue: [
-		self performer playFor: aNumberOfSteps ]
+		self performer playFor: aNumberOfSteps ].
+	displayVisualizer ifTrue: [
+		isVisualizerOpen ifFalse: [
+			stepVisualizer addSteps: self transportStep.
+			stepVisualizer initializeAnimation: self freq.
+			self openVisualizers.
+			self isVisualizerOpen: true ].
+		isVisualizerOpen ifTrue: [ stepVisualizer animationIsRunning: true ].
+		stepVisualizer pauseAnimation: 15 / bpm / 60 * (aNumberOfSteps / 16).
+		visualizer initAnimation: 15 / bpm / 60 * (aNumberOfSteps / 16)].
+	visualizer squareArray do: [:s |
+		 s initializeAnimation:
+        freq * 4 ] .
+	self resetAllSequencers.
+
 ]
 
 { #category : 'as yet unclassified' }
@@ -675,7 +689,8 @@ Performance >> solo: aKeyOrAnArrayOfKeys [
 { #category : 'accessing' }
 Performance >> stop [
 
-	stepVisualizer animRunning: false.
+	visualizer cleanVisualizer.
+	stepVisualizer animationIsRunning: false.
 	self activeProcess terminate
 ]
 
@@ -707,7 +722,6 @@ Performance >> transportStep [
 
 { #category : 'accessing' }
 Performance >> transportStep: anInteger [
-
 	transportStep := anInteger 
 ]
 
@@ -716,4 +730,9 @@ Performance >> unsolo: aKeyInPerformance [
 	"convenience method to unsolo a key in the performance"
 	
 	self restore
+]
+
+{ #category : 'accessing' }
+Performance >> visualizer [
+	^visualizer 
 ]
